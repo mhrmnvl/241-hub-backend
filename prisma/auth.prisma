@@ -1,6 +1,6 @@
 model User {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @map("organization_id") @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
   schoolUnitId   String?       @map("school_unit_id") @db.Uuid
   identifier     String        @db.VarChar(100)
   passwordHash   String        @map("password_hash") @db.VarChar(255)
@@ -17,8 +17,8 @@ model User {
   userRoles     UserRole[]
   auditLogs     AuditLog[]
   uploadedFiles File[]
-  organization  Organization  @relation(fields: [organizationId], references: [id])
-  schoolUnit    SchoolUnit?   @relation(fields: [schoolUnitId], references: [id])
+  organization  Organization?  @relation(fields: [organizationId], references: [id])
+  schoolUnit    SchoolUnit?    @relation(fields: [schoolUnitId], references: [id])
 
   @@unique([schoolUnitId, identifier])
   @@map("users")
