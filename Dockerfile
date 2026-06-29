@@ -23,6 +23,9 @@ RUN pnpm prisma generate
 # Build NestJS
 RUN pnpm run build
 
+# Prune devDependencies — keep only prod deps in node_modules
+RUN pnpm prune --prod
+
 # ============================================================
 # Stage 2: Runner (production image)
 # ============================================================
@@ -32,11 +35,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy manifests for prod install
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# Copy package.json for scripts (start:prod, etc.)
+COPY package.json ./
 
-# Install production deps only (HUSKY=0 skips prepare script)
-RUN HUSKY=0 pnpm install --frozen-lockfile --prod
+# Copy pruned node_modules from builder (no devDeps, no reinstall needed)
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built output from builder
 COPY --from=builder /app/dist ./dist
@@ -44,10 +47,6 @@ COPY --from=builder /app/dist ./dist
 # Copy prisma schema & migrations (needed for migrate deploy at startup)
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-
-# Copy generated Prisma Client from builder
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Non-root user for security
 RUN addgroup --system --gid 1001 nodejs \
