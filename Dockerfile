@@ -54,12 +54,13 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
-# Non-root user for security
+# Fix ownership — semua file /app harus dimiliki user nestjs
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nestjs
+  && adduser --system --uid 1001 nestjs \
+  && chown -R nestjs:nodejs /app
 USER nestjs
 
 EXPOSE 3000
 
-# Run migrations then start app
-CMD ["pnpm", "run", "start:prod"]
+# Jalankan node langsung — hindari corepack download saat startup
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/src/main.js"]
