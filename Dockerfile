@@ -18,7 +18,10 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Generate Prisma Client
-RUN pnpm prisma generate
+# (dummy URL: generate only reads schema, no DB connection made)
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
+    DIRECT_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
+    pnpm prisma generate
 
 # Build NestJS
 RUN pnpm run build
