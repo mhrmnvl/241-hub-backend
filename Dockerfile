@@ -26,6 +26,9 @@ RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
 # Build NestJS
 RUN pnpm run build
 
+# Remove 'prepare' script before pruning (prevents husky hook from running)
+RUN node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); delete p.scripts.prepare; fs.writeFileSync('package.json', JSON.stringify(p))"
+
 # Prune devDependencies — keep only prod deps in node_modules
 RUN pnpm prune --prod
 
