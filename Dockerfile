@@ -35,8 +35,8 @@ WORKDIR /app
 # Copy manifests for prod install
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 
-# Install production deps only
-RUN pnpm install --frozen-lockfile --prod
+# Install production deps only (HUSKY=0 skips prepare script)
+RUN HUSKY=0 pnpm install --frozen-lockfile --prod
 
 # Copy built output from builder
 COPY --from=builder /app/dist ./dist
