@@ -37,14 +37,17 @@ RUN pnpm prune --prod
 # ============================================================
 FROM node:22-alpine AS runner
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Disable corepack entirely — prevents pnpm auto-download at runtime
+# Northflank's entrypoint detects package.json and triggers pnpm install
+# which causes corepack to try downloading pnpm -> EACCES errors
+RUN corepack disable
 
 WORKDIR /app
 
-# Copy package.json for scripts (start:prod, etc.)
+# Copy package.json (needed by some tools but corepack is disabled)
 COPY package.json ./
 
-# Copy pruned node_modules from builder (no devDeps, no reinstall needed)
+# Copy pruned node_modules from builder (prod deps only, no reinstall needed)
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built output from builder
@@ -54,7 +57,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
-# Fix ownership — semua file /app harus dimiliki user nestjs
+# Fix ownership — all /app files owned by nestjs user
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nestjs \
   && chown -R nestjs:nodejs /app
@@ -62,5 +65,5 @@ USER nestjs
 
 EXPOSE 3000
 
-# Jalankan node langsung — hindari corepack download saat startup
+# Run via node directly — no pnpm/corepack involved
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/src/main.js"]
