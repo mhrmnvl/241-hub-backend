@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm run prisma:generate && pnpm run build",
+  "installCommand": "corepack enable pnpm && pnpm install --frozen-lockfile",
+  "outputDirectory": ".",
+  "functions": {
+    "api/index.ts": {
+      "memory": 512,
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}

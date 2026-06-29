@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Git
+.git
+.gitignore
+
+# Environment files (inject via Northflank env vars)
+.env
+.env.*
+!.env.example
+
+# Dev/agent tools
+.agents
+.agent
+.gemini
+
+# Docs & internal files
+docs
+README.md
+
+# Test files
+test
+coverage
+*.spec.ts
+*.e2e-spec.ts
+
+# Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# TypeScript source maps (not needed in prod image)
+*.tsbuildinfo
+
+# Husky
+.husky

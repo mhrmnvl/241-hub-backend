@@ -1,0 +1,36 @@
+model OrganizationType {
+  id        String    @id @default(uuid()) @db.Uuid
+  code      String    @unique @db.VarChar(50)
+  name      String    @db.VarChar(100)
+  isActive  Boolean   @default(true) @map("is_active")
+
+  organizations Organization[]
+
+  @@map("organization_types")
+}
+
+model Organization {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  typeId      String?   @map("type_id") @db.Uuid
+  name        String    @db.VarChar(200)
+  code        String    @unique @db.VarChar(50)
+  email       String?   @db.VarChar(255)
+  phoneNumber String?   @map("phone_number") @db.VarChar(15)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type           OrganizationType? @relation(fields: [typeId], references: [id])
+  files          File[]
+  fileCategories FileCategory[]
+  schoolUnits    SchoolUnit[]
+  users          User[]
+  roles          Role[]
+  auditLogs      AuditLog[]
+
+  @@map("organizations")
+}
+

@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel redundant runs on the same branch/PR
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Lint · Type-check · Test · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ─── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # ─── pnpm ──────────────────────────────────────────────────────────────
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      # ─── Node.js ─────────────────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # ─── Install ─────────────────────────────────────────────────────────────
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ─── Prisma generate ────────────────────────────────────────────────────
+      # Generates the Prisma client so TypeScript compilation succeeds.
+      # No real DB connection is needed at this stage.
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          DIRECT_URL: postgresql://dummy:dummy@localhost:5432/dummy
+
+      # ─── Lint ────────────────────────────────────────────────────────────────
+      - name: Lint
+        run: pnpm lint
+
+      # ─── Format check ────────────────────────────────────────────────────────
+      - name: Check formatting
+        run: pnpm format:check
+
+      # ─── Type check ──────────────────────────────────────────────────────────
+      # Catches type errors that ESLint alone cannot detect.
+      - name: Type check
+        run: pnpm typecheck
+
+      # ─── Unit tests ──────────────────────────────────────────────────────────
+      - name: Run unit tests
+        run: pnpm test:ci
+        env:
+          # App
+          NODE_ENV: test
+          PORT: 3000
+          TRUST_PROXY: 0
+          THROTTLE_TTL: 60000
+          THROTTLE_LIMIT: 500
+          AUTH_THROTTLE_TTL: 60000
+          AUTH_THROTTLE_LIMIT: 20
+          # Auth
+          JWT_SECRET: ci-test-secret-not-for-production
+          JWT_ACCESS_EXPIRATION: 15m
+          JWT_REFRESH_EXPIRATION: 7d
+          BCRYPT_SALT_ROUNDS: 10
+          # CORS
+          FRONTEND_URL: http://localhost:5173
+          # Database (dummy — unit tests use mocked Prisma, no real connection needed)
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          DIRECT_URL: postgresql://dummy:dummy@localhost:5432/dummy
+
+      # ─── Upload coverage report ───────────────────────────────────────────────
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+      # ─── Build ────────────────────────────────────────────────────────────────
+      - name: Build
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          DIRECT_URL: postgresql://dummy:dummy@localhost:5432/dummy
+
+      # ─── Security audit ───────────────────────────────────────────────────────
+      # Non-blocking: reports known vulnerabilities without failing the pipeline.
+      - name: Security audit
+        run: pnpm audit --prod || true

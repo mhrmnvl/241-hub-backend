@@ -1,0 +1,45 @@
+model User {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  schoolUnitId   String?       @map("school_unit_id") @db.Uuid
+  identifier     String        @db.VarChar(100)
+  passwordHash   String        @map("password_hash") @db.VarChar(255)
+  isActive       Boolean       @default(true) @map("is_active")
+  lastLoginAt    DateTime?     @map("last_login_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  teacher       Teacher?
+  profile       Profile?
+  sessions      AuthSession[]
+  student       Student?
+  userRoles     UserRole[]
+  auditLogs     AuditLog[]
+  uploadedFiles File[]
+  organization  Organization  @relation(fields: [organizationId], references: [id])
+  schoolUnit    SchoolUnit?   @relation(fields: [schoolUnitId], references: [id])
+
+  @@unique([schoolUnitId, identifier])
+  @@map("users")
+}
+
+model AuthSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @map("token_hash") @db.VarChar(255)
+  userAgent  String?   @map("user_agent") @db.VarChar(512)
+  ipAddress  String?   @map("ip_address") @db.VarChar(64)
+  expiresAt  DateTime  @map("expires_at")
+  lastUsedAt DateTime  @default(now()) @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([tokenHash])
+  @@map("auth_sessions")
+}

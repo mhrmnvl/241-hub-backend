@@ -1,0 +1,54 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
+import { CreateTeachingAssignmentDto } from '../dto/create-teaching-assignment.dto.js';
+import { TeachingAssignmentsRepository } from '../repositories/teaching-assignments.repository.js';
+
+@Injectable()
+export class CreateTeachingAssignmentUseCase {
+  constructor(private readonly repo: TeachingAssignmentsRepository) {}
+
+  async execute(dto: CreateTeachingAssignmentDto) {
+    const [classroom, semester] = await Promise.all([
+      this.repo.findClassroomById(dto.classroomId),
+      this.repo.findSemesterById(dto.semesterId),
+    ]);
+
+    if (
+      classroom &&
+      semester &&
+      classroom.academicYearId !== semester.academicYearId
+    ) {
+      throw new BadRequestException(
+        'Classroom and semester must belong to the same academic year',
+      );
+    }
+
+    const dup = await this.repo.findDuplicate(
+      dto.teacherId,
+      dto.classroomId,
+      dto.subjectId,
+      dto.semesterId,
+    );
+    if (dup) throw new ConflictException('Teaching assignment already exists');
+
+    const softDeleted = await this.repo.findSoftDeleted(
+      dto.teacherId,
+      dto.classroomId,
+      dto.subjectId,
+      dto.semesterId,
+    );
+    if (softDeleted) {
+      return this.repo.restore(softDeleted.id, {
+        teacherId: dto.teacherId,
+        classroomId: dto.classroomId,
+        subjectId: dto.subjectId,
+        semesterId: dto.semesterId,
+      });
+    }
+
+    return this.repo.create(dto);
+  }
+}
