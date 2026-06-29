@@ -18,7 +18,7 @@ export class TokenManagerService {
     user: {
       id: string;
       identifier: string;
-      organizationId: string;
+      organizationId: string | null;
       schoolUnitId: string | null;
     },
     sessionId: string,
