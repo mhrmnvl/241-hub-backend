@@ -1,4 +1,4 @@
-﻿import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -50,8 +50,22 @@ async function bootstrap() {
     }),
   );
 
+  // Support multiple FRONTEND_URLs (comma-separated) untuk handle www/non-www
+  const frontendUrls = frontendUrl
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: frontendUrl,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow requests with no origin (mobile apps, curl, health checks)
+      if (!origin) return callback(null, true);
+      if (frontendUrls.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS not allowed for origin: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
